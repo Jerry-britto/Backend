@@ -1,7 +1,6 @@
 import mongoose,{Schema} from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-import { User } from "./user.model";
 
 const videoSchema = new Schema({
     videoFile:{
