@@ -1,7 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteCoverImage,
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -285,11 +289,11 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(400, "avatar file is missing");
   }
 
-  console.log("old photo ",req.user?.avatar);
+  console.log("old photo ", req.user?.avatar);
   const deleteOldAvatar = await deleteFromCloudinary(req.user?.avatar);
-  if(deleteOldAvatar?.result!='ok'){
+  if (deleteOldAvatar?.result != "ok") {
     console.log("Could not delete old avatar");
-    throw new ApiError(500,"Could not delete your old avatar");
+    throw new ApiError(500, "Could not delete your old avatar");
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
@@ -307,7 +311,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
-  return res.status(201).json(new ApiResponse(200, user, "Avatar Image updated"));
+  return res
+    .status(201)
+    .json(new ApiResponse(200, user, "Avatar Image updated"));
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -315,6 +321,15 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
   if (!coverImageLocalPath) {
     throw new ApiError(400, "cover image  file is missing");
+  }
+
+  // delete old cover image
+  const oldCoverImage = req.user?.coverImage;
+  if (oldCoverImage != "") {
+    const res = await deleteCoverImage(oldCoverImage);
+    if (res.result != "ok") {
+      throw new ApiError(501, "Old Cover image could not deleted");
+    }
   }
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
@@ -333,7 +348,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
-  return res.status.json(new ApiResponse(200, user, "Cover Image updated"));
+  return res.status(201).json(new ApiResponse(200, user, "Cover Image updated"));
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
@@ -411,56 +426,60 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     );
 });
 
-const getWatchHistory = asyncHandler(async(req,res)=>{
+const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
-      $match:{
-        _id: new mongoose.Types.ObjectId(req.user._id)
-      }
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
     },
     {
-      $lookup:{
-        from:"videos",
-        localField:"watchHistory",
-        foreignField:"_id",
-        as:"watchHistory",
-        pipeline:[
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
           {
-            $lookup:{
-              from:"users",
-              localField:"owner",
-              foreignField:"_id",
-              as:"owner",
-              pipeline:[
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
                 {
-                  $project:{
-                    fullName:1,
-                    username:1,
-                    avatar:1,
-                  }
-                }
-              ]
-            }
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
           },
           {
-            $addFields:{
-              owner:{
-                $first:"$owner" // getting first element of the array 
+            $addFields: {
+              owner: {
+                $first: "$owner", // getting first element of the array
                 // alternative approach is arrayElementAt
-              }
-            }
-          }
-        ]
-      }
-    }
-  ])
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
   return res
-  .status(200)
-  .json(
-    new ApiResponse(200,user[0].watchHistory,"Watch History fetched successfully")
-  )
-})
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "Watch History fetched successfully"
+      )
+    );
+});
 
 export {
   registerUser,
@@ -473,5 +492,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
-  getWatchHistory
+  getWatchHistory,
 };

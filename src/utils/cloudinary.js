@@ -41,4 +41,19 @@ const deleteFromCloudinary = async (filePath) => {
   }
 };
 
-export { uploadOnCloudinary, deleteFromCloudinary };
+const deleteCoverImage = async (filePath) => {
+  try {
+    if (!filePath) return null;
+    // delete the file from cloudinary
+    const image_name = filePath.split("/");
+    const public_id = image_name[image_name.length - 1].split(".")[0];
+    const response = await cloudinary.uploader.destroy(public_id);
+    console.log("deletion response ", response);
+    return response;
+  } catch (error) {
+    console.log("could not delete your old cover image due to ", error.message);
+    return null;
+  }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary,deleteCoverImage };
