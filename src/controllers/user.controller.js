@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -178,7 +178,7 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged out"));
+    .json(new ApiResponse(200, req.user, "User logged out"));
 });
 
 //to verify refresh token and create new access and refresh token if user by mistaken got logout
@@ -285,12 +285,18 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(400, "avatar file is missing");
   }
 
+  console.log("old photo ",req.user?.avatar);
+  const deleteOldAvatar = await deleteFromCloudinary(req.user?.avatar);
+  if(deleteOldAvatar?.result!='ok'){
+    console.log("Could not delete old avatar");
+    throw new ApiError(500,"Could not delete your old avatar");
+  }
+
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
   if (!avatar.url) {
     throw new ApiError(400, "Error file uploading avatar");
   }
-
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -301,7 +307,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
-  return res.status.json(new ApiResponse(200, user, "Avatar Image updated"));
+  return res.status(201).json(new ApiResponse(200, user, "Avatar Image updated"));
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -367,7 +373,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
           $size: "$subscribers", //$ indicates field (dollar present in value of object)
         },
         channelsSubscribedTo: {
-          $size: "subscribedTo",
+          $size: "$subscribedTo",
         },
         isSubscribed: {
           //sending client 1 or 0 indicating whether user has subscribed or not
@@ -439,7 +445,8 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
           {
             $addFields:{
               owner:{
-                $first:"$owner"
+                $first:"$owner" // getting first element of the array 
+                // alternative approach is arrayElementAt
               }
             }
           }
