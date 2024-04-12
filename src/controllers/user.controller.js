@@ -2,7 +2,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import {
-  deleteCoverImage,
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
@@ -326,7 +325,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   // delete old cover image
   const oldCoverImage = req.user?.coverImage;
   if (oldCoverImage != "") {
-    const res = await deleteCoverImage(oldCoverImage);
+    const res = await deleteFromCloudinary(oldCoverImage);
     if (res.result != "ok") {
       throw new ApiError(501, "Old Cover image could not deleted");
     }
