@@ -34,10 +34,10 @@ This project is a backend implementation for a YouTube clone built using Node.js
 ## Getting Started
 
 1. Clone the repository:
-    git clone https://github.com/your-username/youtube-clone-backend.git
+    git clone https://github.com/Jerry-britto/Backend.git
 
 2. Install dependencies:
-   cd backend
+   cd Backend
    npm install
    
 3. Set up environment variables:
